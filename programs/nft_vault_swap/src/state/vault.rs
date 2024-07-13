@@ -2,5 +2,6 @@ use anchor_lang::prelude::*;
 
 #[account]
 pub struct Vault {
-    pub bump: u8,
+    pub owner: Pubkey,
+    pub price: u64,
 }

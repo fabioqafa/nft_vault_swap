@@ -21,8 +21,8 @@ pub struct LockNFT<'info> {
     pub vault_token_account: Account<'info, TokenAccount>,
     #[account(mut)]
     pub vault: Account<'info, Vault>,
-    #[account(mut)]
-    pub treasury: AccountInfo<'info>,
+    // #[account(mut)]
+    // pub treasury: AccountInfo<'info>,
 
     pub mint: Account<'info, Mint>,
     pub token_program: Program<'info, Token>,
@@ -46,7 +46,7 @@ pub fn handler(ctx: Context<LockNFT>) -> Result<()> {
     // Transfer rent fees to the protocol treasury
     let rent_amount = ctx.accounts.rent.minimum_balance(TokenAccount::LEN);
     **ctx.accounts.signer.to_account_info().try_borrow_mut_lamports()? -= rent_amount;
-    **ctx.accounts.treasury.to_account_info().try_borrow_mut_lamports()? += rent_amount;
+    **ctx.accounts.vault.to_account_info().try_borrow_mut_lamports()? += rent_amount;
 
     Ok(())
 }

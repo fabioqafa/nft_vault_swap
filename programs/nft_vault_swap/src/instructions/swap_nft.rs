@@ -18,13 +18,13 @@ pub struct SwapSolForNFT<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn handler(ctx: Context<SwapSolForNFT>, amount: u64) -> Result<()> {
+pub fn handler(ctx: Context<SwapSolForNFT>) -> Result<()> {
     // Transfer SOL from user to vault
     invoke(
         &system_instruction::transfer(
             ctx.accounts.user.to_account_info().key,
             ctx.accounts.vault.to_account_info().key,
-            amount,
+            ctx.accounts.vault.price,
         ),
         &[
             ctx.accounts.user.to_account_info(),
