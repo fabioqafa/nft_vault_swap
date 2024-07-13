@@ -1,4 +1,4 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*};
 use anchor_spl::{
     token::{Token, Mint, TokenAccount, Transfer},
     associated_token::AssociatedToken
@@ -9,7 +9,7 @@ use crate::state::vault::Vault;
 #[derive(Accounts)]
 pub struct LockNFT<'info> {
     #[account(mut, signer)]
-    pub signer: AccountInfo<'info>,
+    pub signer: Signer<'info>,
     #[account(mut)]
     pub token_account: Account<'info, TokenAccount>,
     #[account(

@@ -1,16 +1,16 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
-use solana_program::{program::invoke, system_instruction};
 use crate::state::vault::Vault;
+use solana_program::{program::invoke, system_instruction};
 
 #[derive(Accounts)]
 pub struct SwapSolForNFT<'info> {
     #[account(mut, signer)]
-    pub user: AccountInfo<'info>,
+    pub buyer: Signer<'info>,
     #[account(mut)]
     pub vault: Account<'info, Vault>,
     #[account(mut)]
-    pub user_token_account: Account<'info, TokenAccount>,
+    pub buyer_token_account: Account<'info, TokenAccount>,
     #[account(mut)]
     pub vault_token_account: Account<'info, TokenAccount>,
 
@@ -20,14 +20,17 @@ pub struct SwapSolForNFT<'info> {
 
 pub fn handler(ctx: Context<SwapSolForNFT>) -> Result<()> {
     // Transfer SOL from user to vault
+    const LAMPORTS_PER_SOL: f64 = 1_000_000_000.0;
+    let price = (ctx.accounts.vault.price as f64 * LAMPORTS_PER_SOL).round() as u64;
+
     invoke(
         &system_instruction::transfer(
-            ctx.accounts.user.to_account_info().key,
+            ctx.accounts.buyer.to_account_info().key,
             ctx.accounts.vault.to_account_info().key,
-            ctx.accounts.vault.price,
+            price,
         ),
         &[
-            ctx.accounts.user.to_account_info(),
+            ctx.accounts.buyer.to_account_info(),
             ctx.accounts.vault.to_account_info(),
             ctx.accounts.system_program.to_account_info(),
         ],
@@ -36,7 +39,7 @@ pub fn handler(ctx: Context<SwapSolForNFT>) -> Result<()> {
     // Transfer NFT from vault to user
     let cpi_accounts = Transfer {
         from: ctx.accounts.vault_token_account.to_account_info(),
-        to: ctx.accounts.user_token_account.to_account_info(),
+        to: ctx.accounts.buyer_token_account.to_account_info(),
         authority: ctx.accounts.vault.to_account_info(),
     };
     let cpi_program = ctx.accounts.token_program.to_account_info();
