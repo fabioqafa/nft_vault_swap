@@ -1,7 +1,8 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*};
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
-use crate::state::vault::Vault;
-use solana_program::{program::invoke, system_instruction};
+// use solana_program::{program::invoke, system_instruction};
+use anchor_lang::solana_program::{program::invoke, system_instruction};
+use crate::state::*;
 
 #[derive(Accounts)]
 pub struct SwapSolForNFT<'info> {
@@ -18,7 +19,7 @@ pub struct SwapSolForNFT<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn handler(ctx: Context<SwapSolForNFT>) -> Result<()> {
+pub fn run_swap_nft(ctx: Context<SwapSolForNFT>) -> Result<()> {
     // Transfer SOL from user to vault
     const LAMPORTS_PER_SOL: f64 = 1_000_000_000.0;
     let price = (ctx.accounts.vault.price as f64 * LAMPORTS_PER_SOL).round() as u64;

@@ -12,7 +12,11 @@ url = "https://api.apr.dev"
 
 [provider]
 cluster = "Localnet"
-wallet = "AutGVHhzZadcs73W5V5TgPY3DiiEu4cgwv63YywjyHvQ.json"
+wallet = "~/.config/solana/id.json"
+
+[[test.genesis]]
+address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"  
+program = "tests/metaplex_token_metadata_program.so"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

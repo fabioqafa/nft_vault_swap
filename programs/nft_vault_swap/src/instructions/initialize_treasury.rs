@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
-use crate::state::treasury::Treasury;
+use anchor_lang::{prelude::*};
+use crate::state::*;
 
 #[derive(Accounts)]
 pub struct InitializeTreasury<'info> {
@@ -11,7 +11,7 @@ pub struct InitializeTreasury<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<InitializeTreasury>, rent: u64) -> Result<()> {
+pub fn run_initialize_treasury(ctx: Context<InitializeTreasury>, rent: u64) -> Result<()> {
     ctx.accounts.treasury.owner = *ctx.accounts.signer.key;
     ctx.accounts.treasury.rent = rent;
     Ok(())
