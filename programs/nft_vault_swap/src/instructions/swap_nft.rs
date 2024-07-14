@@ -1,22 +1,31 @@
 use anchor_lang::{prelude::*};
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
+use anchor_spl::associated_token::AssociatedToken;
 // use solana_program::{program::invoke, system_instruction};
 use anchor_lang::solana_program::{program::invoke, system_instruction};
 use crate::state::*;
+use crate::ID;
 
 #[derive(Accounts)]
 pub struct SwapSolForNFT<'info> {
-    #[account(mut, signer)]
+    #[account(mut)]
     pub buyer: Signer<'info>,
     #[account(mut)]
     pub vault: Account<'info, Vault>,
+    /// CHECK:
     #[account(mut)]
-    pub buyer_token_account: Account<'info, TokenAccount>,
+    pub buyer_token_account: AccountInfo<'info>,
     #[account(mut)]
     pub vault_token_account: Account<'info, TokenAccount>,
 
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
+    pub ata_program: Program<'info, AssociatedToken>,
+    ///CHECK:
+    pub metadata_account: AccountInfo<'info>,
+    /// CHECK:
+    pub mint_account: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
 }
 
 pub fn run_swap_nft(ctx: Context<SwapSolForNFT>) -> Result<()> {
@@ -36,6 +45,13 @@ pub fn run_swap_nft(ctx: Context<SwapSolForNFT>) -> Result<()> {
             ctx.accounts.system_program.to_account_info(),
         ],
     )?;
+    let metadata = &ctx.accounts.metadata_account;
+    let metadata_binding = metadata.clone().key();
+
+    let seeds: &[&[u8]] = &[b"vault", metadata_binding.as_ref()];
+    let (_, bump) = Pubkey::find_program_address(&seeds, &ID);
+    
+    let signer_seeds: &[&[&[u8]]] = &[&[b"vault", metadata_binding.as_ref(), &[bump]]];
 
     // Transfer NFT from vault to user
     let cpi_accounts = Transfer {
@@ -44,8 +60,9 @@ pub fn run_swap_nft(ctx: Context<SwapSolForNFT>) -> Result<()> {
         authority: ctx.accounts.vault.to_account_info(),
     };
     let cpi_program = ctx.accounts.token_program.to_account_info();
-    let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+    let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts)
+    .with_signer(signer_seeds);
     token::transfer(cpi_ctx, 1)?;
-
+    
     Ok(())
 }

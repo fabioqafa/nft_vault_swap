@@ -2,10 +2,9 @@ use anchor_lang::{prelude::*};
 use anchor_spl::{
     associated_token::AssociatedToken,
     metadata::{
-        create_master_edition_v3, create_metadata_accounts_v3, CreateMasterEditionV3,
-        CreateMetadataAccountsV3, Metadata
+      Metadata
     },
-    token::{mint_to, Mint, MintTo, Token, TokenAccount},
+    token::{Token},
 };
 // use mpl_token_metadata::types::{Collection, Creator, DataV2};
 use mpl_token_metadata::instructions::{CreateCpiBuilder, MintCpiBuilder};

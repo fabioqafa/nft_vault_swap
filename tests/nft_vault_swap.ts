@@ -27,15 +27,21 @@ describe('testing nft_vault_swap', () => {
   const TokenProgram = new anchor.web3.PublicKey(
     'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' // This is the known address for the SPL Token program
   );
-
+  const mintKp = anchor.web3.Keypair.generate();
+  const [metadataAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+    [
+      Buffer.from('metadata'),
+      MetadataProgram.toBuffer(),
+      mintKp.publicKey.toBuffer(),
+    ],
+    MetadataProgram
+  );
   before(async () => {
     // fetch MetadataProgram account
     const mpl = await provider.connection.getAccountInfo(MetadataProgram);
     const atp = await provider.connection.getAccountInfo(
       AssociatedTokenProgram
     );
-    console.log('atp: ', atp);
-    console.log('mpl: ', mpl);
   });
   it('Initializes the treasury', async () => {
     const rent = new anchor.BN(1000);
@@ -56,18 +62,8 @@ describe('testing nft_vault_swap', () => {
     );
     //anchor.BN instances should be compared using toString() to avoid direct comparison issues
     expect(treasuryAccount.rent.toString()).to.equal(rent.toString());
-    console.log('treasuryAccount', treasuryAccount);
   });
   it('Mint a NFT', async () => {
-    const mintKp = anchor.web3.Keypair.generate();
-    const [metadataAccount] = anchor.web3.PublicKey.findProgramAddressSync(
-      [
-        Buffer.from('metadata'),
-        MetadataProgram.toBuffer(),
-        mintKp.publicKey.toBuffer(),
-      ],
-      MetadataProgram
-    );
     const [vault] = anchor.web3.PublicKey.findProgramAddressSync(
       [Buffer.from('vault'), metadataAccount.toBuffer()],
       program.programId
@@ -82,8 +78,6 @@ describe('testing nft_vault_swap', () => {
       0,
       mintKp
     );
-    const info = await provider.connection.getAccountInfo(mintKp.publicKey);
-    // console.log('mint info: ', info);
     const tokenAccount = anchor.web3.Keypair.generate().publicKey;
     const [masterEditionAccount] = anchor.web3.PublicKey.findProgramAddressSync(
       [
@@ -103,13 +97,16 @@ describe('testing nft_vault_swap', () => {
         ],
         AssociatedTokenProgram
       );
-    console.log('mint: ', mintKp.publicKey.toBase58());
-    console.log('metadataAccount: ', metadataAccount.toBase58());
-    console.log('vault: ', vault.toBase58());
-    console.log('tokenAccount: ', tokenAccount.toBase58());
-    console.log('masterEditionAccount: ', masterEditionAccount.toBase58());
-    console.log('treasury: ', treasuryPda.toBase58());
-    console.log('associatedTokenAccount: ', associatedTokenAccount.toBase58());
+    console.log('Mint Account: ', mintKp.publicKey.toBase58());
+    console.log('Metadata Account: ', metadataAccount.toBase58());
+    console.log('Vault Account: ', vault.toBase58());
+    console.log('Token Account: ', tokenAccount.toBase58());
+    console.log('Master Edition Account: ', masterEditionAccount.toBase58());
+    console.log('Treasury Account: ', treasuryPda.toBase58());
+    console.log(
+      'Associated Token Account: ',
+      associatedTokenAccount.toBase58()
+    );
     const accounts = {
       payer: provider.wallet.publicKey,
       mint: mintKp.publicKey,
@@ -130,5 +127,74 @@ describe('testing nft_vault_swap', () => {
       .accounts(accounts)
       .signers([payer, mintKp])
       .rpc();
+  });
+  it('Swap NFT', async () => {
+    const [metadataAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+      [
+        Buffer.from('metadata'),
+        MetadataProgram.toBuffer(),
+        mintKp.publicKey.toBuffer(),
+      ],
+      MetadataProgram
+    );
+    const [vault] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from('vault'), metadataAccount.toBuffer()],
+      program.programId
+    );
+    const buyer = anchor.web3.Keypair.generate();
+    const [buyerTokenAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+      [
+        buyer.publicKey.toBuffer(),
+        TokenProgram.toBuffer(),
+        mintKp.publicKey.toBuffer(),
+      ],
+      AssociatedTokenProgram
+    );
+
+    const [vaultTokenAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+      [vault.toBuffer(), TokenProgram.toBuffer(), mintKp.publicKey.toBuffer()],
+      AssociatedTokenProgram
+    );
+
+    const accounts = {
+      buyer: buyer.publicKey,
+      vault,
+      buyerTokenAccount,
+      vaultTokenAccount,
+      mintAccount: mintKp.publicKey,
+      ataProgram: AssociatedTokenProgram,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      metadataAccount,
+    };
+
+    const systemProgram = anchor.web3.SystemProgram;
+    let txn = new anchor.web3.Transaction();
+    txn.add(
+      systemProgram.transfer({
+        fromPubkey: payer.publicKey,
+        toPubkey: buyer.publicKey,
+        lamports: 10_000_000_000, // 10 SOL
+      })
+    );
+    await anchor.web3.sendAndConfirmTransaction(
+      program.provider.connection,
+      txn,
+      [payer]
+    );
+    await splToken.createAssociatedTokenAccount(
+      program.provider.connection,
+      buyer,
+      mintKp.publicKey,
+      buyer.publicKey
+    );
+    console.log('Buyer: ', buyer.publicKey.toBase58());
+    console.log('Token Account of the Buyer: ', buyerTokenAccount.toBase58());
+    console.log('Mint Account: ', mintKp.publicKey.toBase58());
+    await program.methods
+      .swapSolForNft()
+      .accounts(accounts)
+      .signers([buyer])
+      .rpc();
+    // change the owner from SystemProgram to SPLTokenProgram & create data for the mint
   });
 });
