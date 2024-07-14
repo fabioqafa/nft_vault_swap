@@ -24,6 +24,9 @@ describe('testing nft_vault_swap', () => {
   const AssociatedTokenProgram = new anchor.web3.PublicKey(
     'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' // This is the known address for the Metaplex Associated Token program
   );
+  const TokenProgram = new anchor.web3.PublicKey(
+    'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' // This is the known address for the SPL Token program
+  );
 
   before(async () => {
     // fetch MetadataProgram account
@@ -71,7 +74,7 @@ describe('testing nft_vault_swap', () => {
     );
     // change the owner from SystemProgram to SPLTokenProgram & create data for the mint
     // HACK: is this really a correct way to create a mint?
-    await splToken.createMint(
+    const mint = await splToken.createMint(
       provider.connection,
       payer,
       vault,
@@ -91,12 +94,22 @@ describe('testing nft_vault_swap', () => {
       ],
       MetadataProgram
     );
+    const [associatedTokenAccount] =
+      anchor.web3.PublicKey.findProgramAddressSync(
+        [
+          vault.toBuffer(),
+          TokenProgram.toBuffer(),
+          mintKp.publicKey.toBuffer(),
+        ],
+        AssociatedTokenProgram
+      );
     console.log('mint: ', mintKp.publicKey.toBase58());
     console.log('metadataAccount: ', metadataAccount.toBase58());
     console.log('vault: ', vault.toBase58());
     console.log('tokenAccount: ', tokenAccount.toBase58());
     console.log('masterEditionAccount: ', masterEditionAccount.toBase58());
     console.log('treasury: ', treasuryPda.toBase58());
+    console.log('associatedTokenAccount: ', associatedTokenAccount.toBase58());
     const accounts = {
       payer: provider.wallet.publicKey,
       mint: mintKp.publicKey,
@@ -105,6 +118,7 @@ describe('testing nft_vault_swap', () => {
       tokenAccount,
       treasury: treasuryPda,
       masterEditionAccount,
+      associatedTokenAccount,
       metadataProgram: MetadataProgram,
       associatedTokenProgram: AssociatedTokenProgram,
       systemProgram: anchor.web3.SystemProgram.programId,

@@ -9,7 +9,7 @@ use anchor_spl::{
 };
 // use mpl_token_metadata::types::{Collection, Creator, DataV2};
 use mpl_token_metadata::instructions::{CreateCpiBuilder, MintCpiBuilder};
-use mpl_token_metadata::{types::{CreateArgs, DataV2, TokenStandard, PrintSupply}};
+use mpl_token_metadata::{types::{CreateArgs, MintArgs, TokenStandard, PrintSupply}};
 // use solana_program::{program::invoke, system_instruction};
 use anchor_lang::solana_program::{program::invoke, system_instruction};
 use crate::state::*;
@@ -34,13 +34,9 @@ pub struct MintNFT<'info> {
   /// CHECK:
   pub sysvar_program: AccountInfo<'info>,
 
-  #[account(
-    init_if_needed,
-    payer = payer,
-    associated_token::mint = mint,
-    associated_token::authority = vault,
-  )]
-  pub associated_token_account: Account<'info, TokenAccount>,
+  /// CHECK:
+  #[account(mut)]
+  pub associated_token_account: AccountInfo<'info>,
 
   pub token_program: Program<'info, Token>,
   pub associated_token_program: Program<'info, AssociatedToken>,  
@@ -129,6 +125,28 @@ pub fn run_mint_nft(
       ctx.accounts.system_program.to_account_info(),
     ],
   )?;
+
+  MintCpiBuilder::new(&ctx.accounts.token_metadata_program)
+    .token(&ctx.accounts.associated_token_account)
+    .token_owner(Some(&ctx.accounts.vault.to_account_info()))
+    .metadata(metadata)
+    .master_edition(Some(&ctx.accounts.master_edition_account))
+    .token_record(None)
+    .mint(&ctx.accounts.mint)
+    .authority(&ctx.accounts.vault.to_account_info())
+    .delegate_record(None)
+    .payer(&ctx.accounts.payer)
+    .system_program(&ctx.accounts.system_program)
+    .sysvar_instructions(&ctx.accounts.sysvar_program)
+    .spl_token_program(&ctx.accounts.token_program)
+    .spl_ata_program(&ctx.accounts.associated_token_program)
+    .authorization_rules(None)
+    .authorization_rules_program(None)
+    .mint_args(MintArgs::V1 {
+      amount: 1,
+      authorization_data: None,
+    })
+    .invoke_signed(&[seeds_signer])?;
 
   Ok(())
 }
